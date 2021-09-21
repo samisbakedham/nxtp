@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./PriceOracle.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IERC20Extended.sol";
 
 interface IStdReference {
     /// A structure returned whenever someone requests for standard reference data.
@@ -48,7 +48,7 @@ interface AggregatorV3Interface {
 
 contract FibPriceOracleETH is PriceOracle {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Extended;
     address public admin;
 
     IStdReference ref;
@@ -94,11 +94,11 @@ contract FibPriceOracleETH is PriceOracle {
     function getPriceFromDex(address _tokenAddress) public view returns (uint256) {
         PriceInfo storage priceInfo = priceRecords[_tokenAddress];
         if (priceInfo.active) {
-            uint256 rawTokenAmount = IERC20(priceInfo.token).balanceOf(priceInfo.lpToken);
-            uint256 tokenDecimalDelta = 18-uint256(IERC20(priceInfo.token).decimals());
+            uint256 rawTokenAmount = IERC20Extended(priceInfo.token).balanceOf(priceInfo.lpToken);
+            uint256 tokenDecimalDelta = 18-uint256(IERC20Extended(priceInfo.token).decimals());
             uint256 tokenAmount = rawTokenAmount.mul(10**tokenDecimalDelta);
-            uint256 rawBaseTokenAmount = IERC20(priceInfo.baseToken).balanceOf(priceInfo.lpToken);
-            uint256 baseTokenDecimalDelta = 18-uint256(IERC20(priceInfo.baseToken).decimals());
+            uint256 rawBaseTokenAmount = IERC20Extended(priceInfo.baseToken).balanceOf(priceInfo.lpToken);
+            uint256 baseTokenDecimalDelta = 18-uint256(IERC20Extended(priceInfo.baseToken).decimals());
             uint256 baseTokenAmount = rawBaseTokenAmount.mul(10**baseTokenDecimalDelta);
             uint256 baseTokenPrice = getPriceFromOracle(priceInfo.baseToken);
             uint256 tokenPrice = baseTokenPrice.mul(baseTokenAmount).div(tokenAmount);
@@ -134,7 +134,7 @@ contract FibPriceOracleETH is PriceOracle {
     }
 
     function getPriceFromBand(address _tokenAddress) public view returns (uint256) {
-        IERC20 token = IERC20(_tokenAddress);
+        IERC20Extended token = IERC20Extended(_tokenAddress);
         string memory tokenSymbol = token.symbol();
         if (compareStrings(tokenSymbol, "WETH")) {
             IStdReference.ReferenceData memory data = ref.getReferenceData("ETH", "USD");
