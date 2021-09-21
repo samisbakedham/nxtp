@@ -46,7 +46,7 @@ interface AggregatorV3Interface {
     );
 }
 
-contract FibPriceOracleETH is PriceOracle {
+contract ConnextPriceOracleETH is PriceOracle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20Extended;
     address public admin;
