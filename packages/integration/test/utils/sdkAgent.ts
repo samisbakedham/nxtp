@@ -135,6 +135,8 @@ export class SdkAgent {
       "local",
     );
     await sdk.connectMessaging();
+
+    sdk.attach(NxtpSdkEvents.ReceiverTransactionPrepared, async () => { logger.debug("ReceiverTransactionPrepared"); });
     const agent = new SdkAgent(address, sdk);
 
     // Parrot all events
