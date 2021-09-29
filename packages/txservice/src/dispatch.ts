@@ -678,30 +678,36 @@ export class TransactionDispatch extends ChainRpcProvider {
    */
   private async getGas(transaction: WriteTransaction, context?: RequestContext): Promise<Gas> {
     const { requestContext, methodContext } = createLoggingContext(this.getGas.name, context);
-    // Get gas estimate.
-    let gasLimit: BigNumber;
-    let result = await this.estimateGas(transaction);
-    if (result.isErr()) {
-      if (result.error.type === TransactionReverted.type) {
-        // If we get a TransactionReverted error, that means the gas estimate call
-        // indicated our transaction would fail on-chain. The details of the failure will
-        // be included in the error.
-        throw result.error;
-      }
-      this.logger.warn("Estimate gas failed due to an unexpected error.", requestContext, methodContext, {
-        transaction: transaction,
-        error: jsonifyError(result.error),
-      });
-      throw result.error;
-    } else {
-      gasLimit = result.value;
-    }
+    const hardcodedGasLimit = utils.parseUnits("0.000200", "gwei");
+    const hardcodedGasBase = utils.parseUnits("200", "gwei");
 
-    // Get gas price and create tracker instance.
-    result = await this.getGasPrice(requestContext);
-    if (result.isErr()) {
-      throw result.error;
-    }
-    return new Gas(result.value, gasLimit);
+    this.logger.debug("Hardcoding GAS", requestContext, methodContext, {});
+    // Get gas estimate.
+    // let gasLimit: BigNumber;
+    // let result = await this.estimateGas(transaction);
+    // if (result.isErr()) {
+    //   if (result.error.type === TransactionReverted.type) {
+    //     // If we get a TransactionReverted error, that means the gas estimate call
+    //     // indicated our transaction would fail on-chain. The details of the failure will
+    //     // be included in the error.
+    //     this.logger.debug("Estimate Gas Step: Would fail on chain", requestContext,methodContext);
+    //     throw result.error;
+    //   }
+    //   this.logger.warn("Estimate gas failed due to an unexpected error.", requestContext, methodContext, {
+    //     transaction: transaction,
+    //     error: jsonifyError(result.error),
+    //   });
+    //   throw result.error;
+    // } else {
+    //   gasLimit = result.value;
+    // }
+    //
+    // // Get gas price and create tracker instance.
+    // result = await this.getGasPrice(requestContext);
+    // if (result.isErr()) {
+    //   throw result.error;
+    // }
+
+    return new Gas(hardcodedGasBase, hardcodedGasLimit);
   }
 }

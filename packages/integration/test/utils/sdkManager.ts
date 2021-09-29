@@ -52,10 +52,13 @@ export class SdkManager {
       numberUsers,
       log.child({ name: "OnchainAccountManager" }),
     );
+
+
     // TODO: this will be slow af
     for (const chain of Object.keys(chainConfig)) {
       // Gift eth
       await onchain.updateBalances(parseInt(chain));
+      log.debug("updating balances");
     }
     // await Promise.all(
     //   Object.keys(chainConfig)
@@ -64,16 +67,19 @@ export class SdkManager {
     // );
 
     // Create sdk agents
+
+    log.debug("creating agents");
     const agents = await Promise.all(
       Array(numberUsers)
         .fill(0)
         .map((_, idx) => {
-          log.debug("Wallet info", undefined, undefined, { idx, address: onchain.wallets[idx].address });
+          log.debug("Connecting Wallet info", undefined, undefined, { idx, address: onchain.wallets[idx].address });
           return SdkAgent.connect(onchain.chainProviders, onchain.wallets[idx], log, natsUrl, authUrl);
         }),
     );
 
     // Create manager
+    log.debug("creating sdk manager");
     const manager = new SdkManager(onchain, agents, log.child({ name: "SdkManager" }));
 
     // Setup manager listeners

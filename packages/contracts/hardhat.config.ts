@@ -25,7 +25,7 @@ const chainId = parseInt(process.env.CHAIN_ID ?? "1337", 10);
 const mnemonic =
   process.env.SUGAR_DADDY ||
   process.env.MNEMONIC ||
-  "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+  "route second gate tissue chat call risk desert hint liquid drive replace";
 
 const config: HardhatUserConfig = {
   solidity: {
