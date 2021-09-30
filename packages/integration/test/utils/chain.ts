@@ -32,19 +32,34 @@ export const getOnchainBalance = async (
     : new Contract(assetId, ERC20Abi, provider).balanceOf(address);
 };
 
+export const getLiquidity = async (chainId: string, assetId: string, funder: Wallet): Promise<BigNumber | undefined> => {
+  const record = (contractDeployments as any)[String(chainId)] ?? {};
+  const name = Object.keys(record)[0];
+  const txManager = record[name]?.contracts?.TransactionManager;
+  const contract = new Contract(txManager.address, txManager.abi, funder);
+  try {
+    const liquidity = await contract.routerBalances(funder.address, assetId);
+    console.log("routerBalances (", funder.address, assetId, "):", liquidity.toString());
+    return liquidity;
+  } catch (e) {
+    console.error("getLiquidity catch *(", chainId, assetId, "):", e);
+    return;
+  }
+};
+
 export const addLiquidity = async (chainId: string, assetId: string, funder: Wallet, amount: string, nonce?: number): Promise<providers.TransactionResponse | undefined> => {
   const record = (contractDeployments as any)[String(chainId)] ?? {};
   const name = Object.keys(record)[0];
-  const txmanagerContract = record[name]?.contracts?.TransactionManager;
-  const contract = new Contract(txmanagerContract.address, txmanagerContract.abi, funder);
+  const txManager = record[name]?.contracts?.TransactionManager;
+  const contract = new Contract(txManager.address, txManager.abi, funder);
   let res: providers.TransactionResponse | undefined = undefined;
   try {
     res = await contract.addLiquidity(amount, assetId, {
       nonce,
     });
-    console.log(res);
+    console.log("addLiquidity response:", res);
   } catch (e) {
-    console.error(e);
+    console.error("addLiquidity catch *(", chainId, assetId, "):", e);
   }
   return res;
 };

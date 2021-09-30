@@ -1,8 +1,8 @@
-import { Logger } from "@connext/nxtp-utils";
+import { jsonifyError, Logger } from "@connext/nxtp-utils";
 import { BigNumber, constants, providers, utils, Wallet } from "ethers";
 import PriorityQueue from "p-queue";
 
-import { addLiquidity, getDecimals, getOnchainBalance, sendGift } from "./chain";
+import { addLiquidity, getDecimals, getLiquidity, getOnchainBalance, sendGift } from "./chain";
 import { ChainConfig } from "./config";
 
 // const MINIMUM_FUNDING_MULTIPLE = 2;
@@ -55,39 +55,73 @@ export class OnchainAccountManager {
         return resultBalances.push(res);
       }),
     );
-    
-    await this.addLiquidity(chainId, assetId);
-    return resultBalances;
-  }
-
-  async addLiquidity(chainId: number, assetId: string) {
-    const isToken = assetId !== constants.AddressZero;
-    if (!isToken) {
-      return;
-    }
 
     const { provider } = this.chainProviders[chainId];
     if (!provider) {
       throw new Error(`Provider not configured for ${chainId}`);
     }
+
+    const funder = this.funder.connect(provider);
+
+    // Calculate amount of liquidity required for tests.
+    try {
+      const decimals = this.cachedDecimals[assetId] ? this.cachedDecimals[assetId] : await getDecimals(assetId, funder);
+      this.cachedDecimals[assetId] = decimals;
+      // TODO: Is this number right? Will this give us enough liquidity to work with?
+      const amount = utils.parseUnits(this.USER_MIN_TOKEN, decimals).mul(this.num_users).mul(11).div(10);
+      const liquidity = await this.getLiquidity(funder, chainId, assetId);
+      if (liquidity && liquidity.lt(amount)) {
+        try {
+          await this.addLiquidity(funder, chainId, assetId, amount.sub(liquidity));
+        } catch (e) {
+          this.log.error("Failed to add liquidity", undefined, undefined, jsonifyError(e), { chainId, assetId });
+        }
+      }
+    } catch (e) {
+      this.log.error("Failed to get decimals!", undefined, undefined, jsonifyError(e), { chainId, assetId });
+    }
+    
+    return resultBalances;
+  }
+
+  async getLiquidity(funder: Wallet, chainId: number, assetId: string): Promise<BigNumber | undefined> {
+    const isToken = assetId !== constants.AddressZero;
+    if (!isToken) {
+      return;
+    }
+
     const funderQueue = this.funderQueues.get(chainId);
     if (!funderQueue) {
       throw new Error(`No queue found for ${chainId}`);
     }
 
-    const funder = this.funder.connect(provider);
+    const liquidity = await funderQueue.add<BigNumber | undefined>(async() => {
+      const liquidity = await getLiquidity(chainId.toString(), assetId, funder);
+      this.log.info("Checked liquidity for router", undefined, undefined, { chainId, assetId, liquidity: liquidity ? liquidity.toString() : "Not found!" });
+      return liquidity;
+    });
+    return liquidity ?? BigNumber.from(0);
+  }
 
-    const decimals = this.cachedDecimals[assetId] ? this.cachedDecimals[assetId] : await getDecimals(assetId, funder);
-    this.cachedDecimals[assetId] = decimals;
-    // TODO: Is this number right? Will this give us enough liquidity to work with?
-    const amount = utils.parseUnits(this.USER_MIN_TOKEN, decimals).mul(this.num_users).mul(11).div(10).toString();
+  async addLiquidity(funder: Wallet, chainId: number, assetId: string, amount: BigNumber): Promise<void> {
+    const isToken = assetId !== constants.AddressZero;
+    if (!isToken) {
+      return;
+    }
+
+    const funderQueue = this.funderQueues.get(chainId);
+    if (!funderQueue) {
+      throw new Error(`No queue found for ${chainId}`);
+    }
+
     await funderQueue.add(async () => {
-      this.log.info("Adding liquidity", undefined, undefined, { assetId, chainId, amount });
+      const stringAmount = amount.toString();
+      this.log.info("Adding liquidity", undefined, undefined, { assetId, chainId, amount: stringAmount });
       let response: providers.TransactionResponse | undefined = undefined;
       const errors: Error[] = [];
       for (let i = 0; i < 3; i++) {
         try {
-          response = await addLiquidity(chainId.toString(), assetId, funder, amount, this.funderNonces.get(chainId));
+          response = await addLiquidity(chainId.toString(), assetId, funder, stringAmount, this.funderNonces.get(chainId));
           if (response) {
             break;
           }
