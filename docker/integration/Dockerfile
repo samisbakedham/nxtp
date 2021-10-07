@@ -1,7 +1,7 @@
 FROM node:14-alpine3.11 as node
 
 # ----------------------------------------
-# Builds Docker container for nxtp-router package.
+# Builds Docker container for nxtp-integration package.
 # @dev configuraion located ./config.json (relative to this file)
 
 # ----------------------------------------
@@ -43,7 +43,7 @@ RUN yarn build:all
 
 # ----- Bundle the app for deployment -----
 ARG APP_NAME
-RUN yarn workspaces focus --production ${APP_NAME}
+RUN yarn workspaces focus --production --immutable ${APP_NAME}
 RUN yarn dlx -p @jtbennett/ts-project-scripts tsp bundle $APP_NAME --out-dir /tmp/bundle
 
 

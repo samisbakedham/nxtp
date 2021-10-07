@@ -1,38 +1,37 @@
 {
   "adminToken": "blahblah",
   "chainConfig": {
-    "1337": {
-      "providers": ["http://172.17.0.1:8545"],
-      "confirmations": 1,
-      "subgraph": "http://172.17.0.1:8010/subgraphs/name/connext/nxtp",
-      "transactionManagerAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
-      "safeRelayerFee": "100"
+    "137": {
+      "providers": [
+        "https://polygon-mainnet.g.alchemy.com/v2/8POGLLGA1mPpC6OZkBWNbGZ8hHgBF9Ae",
+        "https://polygon-rpc.com"
+      ],
+      "minGas": "100000000000000",
+      "subgraph": "https://api.thegraph.com/subgraphs/name/connext/nxtp-matic",
+      "confirmations": 60
+
     },
-    "1338": {
-      "providers": ["http://172.17.0.1:8546"],
-      "confirmations": 1,
-      "subgraph": "http://172.17.0.1:9010/subgraphs/name/connext/nxtp",
-      "transactionManagerAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0",
-      "safeRelayerFee": "100"
+    "250": {
+      "providers": [
+        "https://morning-blue-darkness.fantom.quiknode.pro/2bb9f35c149d56e54a72ea63773ed945aa53ddc7/",
+        "https://rpc.ftm.tools/"
+      ],
+      "subgraph": "https://api.thegraph.com/subgraphs/name/connext/nxtp-fantom",
+      "minGas": "100000000000000",
+      "confirmations": 20
     }
   },
-  "logLevel": "info",
+  "logLevel": "debug",
   "natsUrl": "nats://172.17.0.1:4222",
   "authUrl": "http://172.17.0.1:5040",
-  "mnemonic": "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
+  "mnemonic": "route second gate tissue chat call risk desert hint liquid drive replace",
+  "diagnosticMode": false,
   "swapPools": [
     {
-      "name": "TEST",
+      "name": "DAI",
       "assets": [
-        { "chainId": 1337, "assetId": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da" },
-        { "chainId": 1338, "assetId": "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da" }
-      ]
-    },
-    {
-      "name": "NATIVE",
-      "assets": [
-        { "chainId": 1337, "assetId": "0x0000000000000000000000000000000000000000" },
-        { "chainId": 1338, "assetId": "0x0000000000000000000000000000000000000000" }
+        { "chainId": 137, "assetId": "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063" },
+        { "chainId": 250, "assetId": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e" }
       ]
     }
   ]

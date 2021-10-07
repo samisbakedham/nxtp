@@ -2,6 +2,21 @@ import { readFileSync } from "fs";
 
 import { providers } from "ethers";
 
+
+//@dev
+//minTxFee is the approx total amount of native gas token (ETH etc.) that an NXTP transaction (prepare/fulfill)
+//wll use on chain. this is in units of ETH string ex. on FTM it takes about .13 FTM / txn. so, "0.13"
+
+
+
+export type IntegrationConfig = {
+  minETH:string,
+  minTxFee?: string,
+  minToken?: string,
+  auctionTimeoutMs?: string,
+  overrides?: Record<string,unknown>
+}
+
 export type ChainConfig = {
   [chainId: number]: {
     confirmations: number;
@@ -11,6 +26,7 @@ export type ChainConfig = {
     priceOracleAddress?: string;
     subgraph?: string;
     gasStations: string[];
+    iConfig?: IntegrationConfig;
   };
 };
 
@@ -32,6 +48,8 @@ type Config = {
   natsUrl?: string;
   authUrl?: string;
 };
+
+
 
 // Copy/pasted from json file in the README - this should generally work for local chain load testing.
 const DEFAULT_LOCAL_CONFIG = {

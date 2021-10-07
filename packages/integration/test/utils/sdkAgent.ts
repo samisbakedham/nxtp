@@ -33,6 +33,8 @@ import PriorityQueue from "p-queue";
 
 import { ChainConfig } from "./config";
 
+//todo:remove debugging only
+
 type AddressField = { address: string };
 
 class TransactionCancelled extends NxtpError {
@@ -157,6 +159,14 @@ export class SdkAgent {
         this.evts[event].post({ ...data, address: this.address });
       });
     });
+
+    this.logger.debug("Firing off fake event");
+
+    // };
+    // const fakeTXPrepareEvt  = {txData:undefined , caller:"0x", encryptedCallData:"0x" , encodedBid:"0x", bidSignature:"0x"};
+
+    // // @ts-ignore
+    // this.evts[NxtpSdkEvents.ReceiverTransactionPrepared].post({fakeTXPrepareEvt, transactionHash:"0x"});
 
     // Setup autofulfill of transfers + post to evt if it failed
     this.sdk.attach(NxtpSdkEvents.ReceiverTransactionPrepared, async (data) => {

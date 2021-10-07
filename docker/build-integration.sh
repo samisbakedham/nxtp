@@ -54,9 +54,7 @@ echo "= Build the build stage image and push to registry"
 echo "====="
 docker build \
   --target build \
-  --cache-from "${BUILD_IMAGE}":lattest \
   --tag "${BUILD_IMAGE}":latest \
-  --cache-from "${BUILD_IMAGE}":latest \
   --build-arg TEMP_DEPS_DIR=${TEMP_DEPS_DIR} \
   --build-arg APP_NAME="${app_full_name}" \
   --file ./docker/integration/Dockerfile \
@@ -97,7 +95,6 @@ echo "====="
 
 docker build \
     --tag "${app_image}":latest \
-    --build-arg TEMP_DEPS_DIR=${TEMP_DEPS_DIR} \
     --build-arg APP_NAME="${app_full_name}" \
     --build-arg SHORT_APP_DIR="${short_app_dir}" \
     --file ./docker/integration/Dockerfile \
