@@ -103,6 +103,9 @@ export class SdkAgent {
 
   private queue = new PriorityQueue({ concurrency: 1 });
 
+  //nonces across chainId
+  private readonly sdkNonces: Map<number, number> = new Map();
+
   private readonly evts: { [K in SdkAgentEvent]: Evt<SdkAgentEventPayloads[K] & AddressField> } = createEvts();
 
   private readonly logger: Logger = new Logger({ name: "sdkAgent", level: "debug" });
@@ -304,11 +307,25 @@ export class SdkAgent {
         }
         // 2. Start the transfer
         if (auction) {
-          const prepareTxfr = await this.sdk.prepareTransfer(auction, true);
+          if(this.sdkNonces.get(params.sendingChainId) === undefined){
+            // we've never sent using that chainId so we should get it from the provider then track ourselves.
+            const onChainNonce = await this.sdk.config.chainConfig[params.sendingChainId]?.provider?.getTransactionCount(this.address);
+            this.sdkNonces.set(params.sendingChainId,  onChainNonce);
+          }
+          const prepareTxfr = await this.sdk.prepareTransfer(auction, true, {nonce:this.sdkNonces.get(params.sendingChainId)});
+          if(!prepareTxfr){
+            this.logger.debug(`Couldnt prepare transfer :(`, requestContext,
+                methodContext ,{prepareTxfr, nonce:this.sdkNonces.get(params.sendingChainId)});
+          }
           this.logger.debug(`Preparing Transfer`, requestContext, methodContext, {
             txfr_info: prepareTxfr,
             txid: bid.transactionId,
           });
+          //we prepared correctly set new tracked nonce.
+          const currentTrackedNonce = this.sdkNonces.get(params.sendingChainId);
+          if(currentTrackedNonce) {
+            this.sdkNonces.set(params.sendingChainId, currentTrackedNonce + 1);
+          }
         } else {
           this.logger.debug(`Couldn't get an auction response`, requestContext, methodContext, {
             txid: bid.transactionId,

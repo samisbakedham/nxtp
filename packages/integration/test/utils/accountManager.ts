@@ -72,7 +72,7 @@ export class OnchainAccountManager {
     let floor;
 
     floor = isToken ? this.USER_MIN_TOKEN : this.USER_MIN_ETH;
-    if(this.chainProviders[chainId].iConfig?.minETH !== undefined) {
+    if(this.chainProviders[chainId].iConfig?.minETH !== undefined && !isToken) {
 
       // @ts-ignore
       floor = utils.parseEther(this.chainProviders[chainId].iConfig.minETH);

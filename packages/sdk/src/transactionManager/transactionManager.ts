@@ -109,6 +109,7 @@ export class TransactionManager {
     chainId: number,
     prepareParams: PrepareParams,
     _requestContext?: RequestContext<string>,
+    overrides?: Record<string, unknown>
   ): Promise<providers.TransactionResponse> {
     const { requestContext, methodContext } = createLoggingContext(
       "TransactionManager.prepare",
@@ -167,11 +168,14 @@ export class TransactionManager {
       const sanitized = parseError(e);
       throw sanitized;
     }
-
+    if(overrides?.nonce){
+      this.logger.debug(`Using SDK tracked nonce ${overrides.nonce}`);
+    }
     const tx = await connected.prepare(contractArgs, {
       value: txData.sendingAssetId === constants.AddressZero ? BigNumber.from(amount) : constants.Zero,
       from: this.signer.getAddress(),
       gasLimit: gasLimit.mul(2),
+      nonce: overrides?.nonce? BigNumber.from(overrides.nonce) : undefined
     });
     this.logger.info("Prepare transaction submitted", requestContext, methodContext, {
       txHash: tx.hash,

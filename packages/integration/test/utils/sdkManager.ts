@@ -31,6 +31,7 @@ export type TransferSummary = {
 export class SdkManager {
   public readonly transactionInfo: { [transactionId: string]: TransactionInfo } = {};
 
+
   private constructor(
     private readonly onchainMgmt: OnchainAccountManager,
     private readonly agents: SdkAgent[],

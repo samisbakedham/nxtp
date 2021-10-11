@@ -137,7 +137,7 @@ export class NxtpSdk {
   private readonly metaTxResponseEvt = createMessagingEvt<MetaTxResponse>();
 
   constructor(
-    private readonly config: {
+    public readonly config: {
       chainConfig: {
         [chainId: number]: {
           provider: providers.FallbackProvider;
@@ -609,6 +609,7 @@ export class NxtpSdk {
   public async prepareTransfer(
     transferParams: AuctionResponse,
     infiniteApprove = false,
+    overrides?: Record<string,unknown>
   ): Promise<{ prepareResponse: providers.TransactionResponse; transactionId: string }> {
     const { requestContext, methodContext } = createLoggingContext(
       this.prepareTransfer.name,
@@ -765,11 +766,18 @@ export class NxtpSdk {
       amount,
       expiry,
     };
-    const prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext);
-    this.evts.SenderTransactionPrepareSubmitted.post({
-      prepareParams: params,
-      transactionResponse: prepareResponse,
-    });
+
+    let prepareResponse;
+    //override for nonce (see if undefined finds its own nonce).
+    if(overrides?.nonce) {
+      prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext, overrides);
+    }else {
+      prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext);
+    }
+      this.evts.SenderTransactionPrepareSubmitted.post({
+        prepareParams: params,
+        transactionResponse: prepareResponse,
+      });
     return { prepareResponse, transactionId };
   }
 
