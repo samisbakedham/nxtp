@@ -20,7 +20,6 @@ import {
   ZeroValueBid,
   AuctionExpired,
   ParamsInvalid,
-  NoChainConfig,
 } from "../errors";
 import { getBidExpiry, AUCTION_EXPIRY_BUFFER, getReceiverAmount, getNtpTimeSeconds } from "../helpers";
 import { AuctionRateExceeded, SubgraphNotSynced } from "../errors/auction";
