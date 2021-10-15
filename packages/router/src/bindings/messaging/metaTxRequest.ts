@@ -36,7 +36,7 @@ export const metaTxRequestBinding = async (
 
   // On every metatx request (i.e. user wants router to fulfill for them)
   // route to metatx handler
-  logger.info("Got metatx", requestContext, methodContext, { data });
+  logger.debug("Got metatx", requestContext, methodContext, { data });
   const { chainId } = data;
 
   const chainConfig = config.chainConfig[chainId];

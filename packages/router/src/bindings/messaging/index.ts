@@ -1,5 +1,6 @@
-import { createLoggingContext, jsonifyError, MetaTxFulfillPayload } from "@connext/nxtp-utils";
+import { createLoggingContext, jsonifyError, MetaTxFulfillPayload, NxtpError } from "@connext/nxtp-utils";
 
+import { ProvidersNotAvailable } from "../../lib/errors";
 import { getContext } from "../../router";
 
 import { auctionRequestBinding } from "./auctionRequest";
@@ -20,6 +21,10 @@ export const bindMessaging = async () => {
     try {
       await auctionRequestBinding(from, inbox, data, err, requestContext);
     } catch (e) {
+      if ((e as NxtpError).type === ProvidersNotAvailable.name) {
+        // do not log this error
+        return;
+      }
       logger.error("Error subscribing to auction request", requestContext, methodContext, jsonifyError(e));
     }
   });

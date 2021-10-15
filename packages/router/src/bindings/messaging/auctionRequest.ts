@@ -43,7 +43,7 @@ export const auctionRequestBinding = async (
   }
 
   // On every new auction broadcast, route to the new auction handler
-  logger.info("Received auction request", requestContext, methodContext);
+  logger.debug("Received auction request", requestContext, methodContext);
   const { bid, bidSignature, gasFeeInReceivingToken } = await newAuction(data, requestContext);
 
   await messaging.publishAuctionResponse(from, inbox, { bid, bidSignature, gasFeeInReceivingToken });

@@ -20,6 +20,7 @@ import {
   ZeroValueBid,
   AuctionExpired,
   ParamsInvalid,
+  NoChainConfig,
 } from "../errors";
 import { getBidExpiry, AUCTION_EXPIRY_BUFFER, getReceiverAmount, getNtpTimeSeconds } from "../helpers";
 import { AuctionRateExceeded, SubgraphNotSynced } from "../errors/auction";
@@ -40,7 +41,7 @@ export const newAuction = async (
   });
 
   const { logger, config, contractReader, txService, wallet, chainData } = getContext();
-  logger.info("Method context", requestContext, methodContext, { data });
+  logger.debug("Method start", requestContext, methodContext, { data });
 
   // Validate params
   const validateInput = ajv.compile(AuctionPayloadSchema);
@@ -72,7 +73,24 @@ export const newAuction = async (
     initiator,
   } = data;
 
-  // TODO: Implement rate limit per user (approximately 1/5s ?).
+  // validate config
+  const sendingConfig = config.chainConfig[sendingChainId];
+  const receivingConfig = config.chainConfig[receivingChainId];
+  if (
+    !sendingConfig?.providers ||
+    sendingConfig.providers.length === 0 ||
+    !receivingConfig?.providers ||
+    receivingConfig.providers.length === 0
+  ) {
+    throw new ProvidersNotAvailable([sendingChainId, receivingChainId], {
+      methodContext,
+      requestContext,
+      sendingChainId,
+      receivingChainId,
+    });
+  }
+
+  logger.info("Processing auction", requestContext, methodContext);
 
   try {
     // Using try/catch in case amount is invalid number (e.g. negative, decimal, etc).
@@ -134,23 +152,6 @@ export const newAuction = async (
     outputDecimals = await txService.getDecimalsForAsset(receivingChainId, receivingAssetId);
   }
   logger.info("Got decimals", requestContext, methodContext, { inputDecimals, outputDecimals });
-
-  // validate config
-  const sendingConfig = config.chainConfig[sendingChainId];
-  const receivingConfig = config.chainConfig[receivingChainId];
-  if (
-    !sendingConfig?.providers ||
-    sendingConfig.providers.length === 0 ||
-    !receivingConfig?.providers ||
-    receivingConfig.providers.length === 0
-  ) {
-    throw new ProvidersNotAvailable([sendingChainId, receivingChainId], {
-      methodContext,
-      requestContext,
-      sendingChainId,
-      receivingChainId,
-    });
-  }
 
   // Make sure subgraphs are synced
   const receivingSyncRecord = await contractReader.getSyncRecord(receivingChainId, requestContext);
