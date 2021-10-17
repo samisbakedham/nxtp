@@ -116,6 +116,7 @@ export const createMessagingEvt = <T>() => {
  * @returns A container keyed on event names whos values contain the EVT instance for the keyed event
  */
 export const createEvts = (): { [K in NxtpSdkEvent]: Evt<NxtpSdkEventPayloads[K]> } => {
+  Evt.setDefaultMaxHandlers(Infinity);
   return {
     [NxtpSdkEvents.SenderTokenApprovalSubmitted]: Evt.create<SenderTokenApprovalSubmittedPayload>(),
     [NxtpSdkEvents.SenderTokenApprovalMined]: Evt.create<SenderTokenApprovalMinedPayload>(),
@@ -147,7 +148,7 @@ export class NxtpSdk {
   private readonly metaTxResponseEvt = createMessagingEvt<MetaTxResponse>();
 
   constructor(
-    public readonly config: {
+    private readonly config: {
       chainConfig: {
         [chainId: number]: {
           provider: providers.FallbackProvider;
@@ -639,7 +640,6 @@ export class NxtpSdk {
   public async prepareTransfer(
     transferParams: AuctionResponse,
     infiniteApprove = false,
-    overrides?: Record<string,unknown>
   ): Promise<{ prepareResponse: providers.TransactionResponse; transactionId: string }> {
     const { requestContext, methodContext } = createLoggingContext(
       this.prepareTransfer.name,
@@ -796,18 +796,11 @@ export class NxtpSdk {
       amount,
       expiry,
     };
-
-    let prepareResponse;
-    //override for nonce (see if undefined finds its own nonce).
-    if(overrides?.nonce) {
-      prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext, overrides);
-    }else {
-      prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext);
-    }
-      this.evts.SenderTransactionPrepareSubmitted.post({
-        prepareParams: params,
-        transactionResponse: prepareResponse,
-      });
+    const prepareResponse = await this.transactionManager.prepare(sendingChainId, params, requestContext);
+    this.evts.SenderTransactionPrepareSubmitted.post({
+      prepareParams: params,
+      transactionResponse: prepareResponse,
+    });
     return { prepareResponse, transactionId };
   }
 
@@ -920,10 +913,12 @@ export class NxtpSdk {
         },
       };
       await this.messaging.publishMetaTxRequest(request, responseInbox);
-
+      let response = undefined;
+      while(!response){ 
       try {
-        const response = await metaTxProm;
-        const metaTxRes = response.data;
+        response = await metaTxProm;
+
+	const metaTxRes = response?.data;
         this.logger.info("Method complete", requestContext, methodContext, {
           txHash: metaTxRes?.transactionHash,
           chainId: metaTxRes?.chainId,
@@ -932,6 +927,8 @@ export class NxtpSdk {
       } catch (e) {
         throw e.message.includes("Evt timeout") ? new MetaTxTimeout(txData.transactionId, META_TX_TIMEOUT, request) : e;
       }
+    }
+    setTimeout(()=>{}, 2000);
     } else {
       this.logger.info("Fulfilling with user's signer", requestContext, methodContext);
       const fulfillResponse = await this.transactionManager.fulfill(

@@ -297,7 +297,11 @@ export class SdkAgent {
         // 1. Run the auction
         while (!auction && auction_attempts < MAX_AUCTION_ATTEMPTS) {
           auction_attempts++;
-          auction = await this.sdk.getTransferQuote(bid);
+          try {
+            auction = await this.sdk.getTransferQuote(bid);
+          }catch (e) {
+            this.logger.debug(`Auction error, retry`);
+          }
           this.logger.debug(
             `Auction attempt ${auction_attempts} for TransactionID: ${bid.transactionId}`,
             requestContext,
@@ -312,15 +316,22 @@ export class SdkAgent {
             const onChainNonce = await this.sdk.config.chainConfig[params.sendingChainId]?.provider?.getTransactionCount(this.address);
             this.sdkNonces.set(params.sendingChainId,  onChainNonce);
           }
-          const prepareTxfr = await this.sdk.prepareTransfer(auction, true, {nonce:this.sdkNonces.get(params.sendingChainId)});
-          if(!prepareTxfr){
-            this.logger.debug(`Couldnt prepare transfer :(`, requestContext,
-                methodContext ,{prepareTxfr, nonce:this.sdkNonces.get(params.sendingChainId)});
-          }
+          let prepareTxfr = undefined;
           this.logger.debug(`Preparing Transfer`, requestContext, methodContext, {
             txfr_info: prepareTxfr,
             txid: bid.transactionId,
           });
+          while(!prepareTxfr) {
+            try {
+              prepareTxfr = await this.sdk.prepareTransfer(auction, true, {nonce: this.sdkNonces.get(params.sendingChainId)});
+            } catch (e) {
+              this.logger.debug(`Couldnt prepare transfer :(`, requestContext,
+                  methodContext, {prepareTxfr, nonce: this.sdkNonces.get(params.sendingChainId)});
+            }
+            //wait a lil
+            setTimeout(()=>{},1500);
+          }
+
           //we prepared correctly set new tracked nonce.
           const currentTrackedNonce = this.sdkNonces.get(params.sendingChainId);
           if(currentTrackedNonce) {
