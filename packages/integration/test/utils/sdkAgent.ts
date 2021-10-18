@@ -295,7 +295,7 @@ export class SdkAgent {
 
       try {
         // 1. Run the auction
-        while (!auction && auction_attempts < MAX_AUCTION_ATTEMPTS) {
+        while (!auction && auction_attempts <= MAX_AUCTION_ATTEMPTS) {
           auction_attempts++;
           try {
             auction = await this.sdk.getTransferQuote(bid);
@@ -310,34 +310,21 @@ export class SdkAgent {
           );
         }
         // 2. Start the transfer
-        if (auction) {
-          if(this.sdkNonces.get(params.sendingChainId) === undefined){
-            // we've never sent using that chainId so we should get it from the provider then track ourselves.
-            const onChainNonce = await this.sdk.config.chainConfig[params.sendingChainId]?.provider?.getTransactionCount(this.address);
-            this.sdkNonces.set(params.sendingChainId,  onChainNonce);
-          }
-          let prepareTxfr = undefined;
-          this.logger.debug(`Preparing Transfer`, requestContext, methodContext, {
-            txfr_info: prepareTxfr,
+       if (auction?.bid) {
+            this.logger.debug(`Preparing Transfer`, requestContext, methodContext, {
             txid: bid.transactionId,
           });
-          while(!prepareTxfr) {
-            try {
-              prepareTxfr = await this.sdk.prepareTransfer(auction, true, {nonce: this.sdkNonces.get(params.sendingChainId)});
-            } catch (e) {
+            try{
+              const prepareTxfr = await this.sdk.prepareTransfer(auction, true);
+              this.logger.debug(`Prepared xfr object S{prepareTxfr}`); 
+	   } catch (e) {
               this.logger.debug(`Couldnt prepare transfer :(`, requestContext,
-                  methodContext, {prepareTxfr, nonce: this.sdkNonces.get(params.sendingChainId)});
+                  methodContext);
             }
-            //wait a lil
-            setTimeout(()=>{},1500);
+   
           }
-
-          //we prepared correctly set new tracked nonce.
-          const currentTrackedNonce = this.sdkNonces.get(params.sendingChainId);
-          if(currentTrackedNonce) {
-            this.sdkNonces.set(params.sendingChainId, currentTrackedNonce + 1);
-          }
-        } else {
+          
+          else {
           this.logger.debug(`Couldn't get an auction response`, requestContext, methodContext, {
             txid: bid.transactionId,
           });
@@ -400,3 +387,4 @@ export class SdkAgent {
     return this.evts[event].pipe(filter).waitFor(timeout) as Promise<SdkAgentEventPayloads[T]>;
   }
 }
+

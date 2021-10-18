@@ -116,8 +116,8 @@ export const createMessagingEvt = <T>() => {
  * @returns A container keyed on event names whos values contain the EVT instance for the keyed event
  */
 export const createEvts = (): { [K in NxtpSdkEvent]: Evt<NxtpSdkEventPayloads[K]> } => {
-  Evt.setDefaultMaxHandlers(Infinity);
   return {
+    Evt.max
     [NxtpSdkEvents.SenderTokenApprovalSubmitted]: Evt.create<SenderTokenApprovalSubmittedPayload>(),
     [NxtpSdkEvents.SenderTokenApprovalMined]: Evt.create<SenderTokenApprovalMinedPayload>(),
     [NxtpSdkEvents.SenderTransactionPrepareSubmitted]: Evt.create<SenderTransactionPrepareSubmittedPayload>(),
@@ -148,24 +148,24 @@ export class NxtpSdk {
   private readonly metaTxResponseEvt = createMessagingEvt<MetaTxResponse>();
 
   constructor(
-    private readonly config: {
-      chainConfig: {
-        [chainId: number]: {
-          provider: providers.FallbackProvider;
-          transactionManagerAddress?: string;
-          priceOracleAddress?: string;
-          subgraph?: string;
-          subgraphSyncBuffer?: number;
+      private readonly config: {
+        chainConfig: {
+          [chainId: number]: {
+            provider: providers.FallbackProvider;
+            transactionManagerAddress?: string;
+            priceOracleAddress?: string;
+            subgraph?: string;
+            subgraphSyncBuffer?: number;
+          };
         };
-      };
-      signer: Signer;
-      logger?: Logger;
-      network?: "testnet" | "mainnet" | "local";
-      natsUrl?: string;
-      authUrl?: string;
-      messaging?: UserNxtpNatsMessagingService;
-      skipPolling?: boolean;
-    },
+        signer: Signer;
+        logger?: Logger;
+        network?: "testnet" | "mainnet" | "local";
+        natsUrl?: string;
+        authUrl?: string;
+        messaging?: UserNxtpNatsMessagingService;
+        skipPolling?: boolean;
+      },
   ) {
     const { chainConfig, signer, messaging, natsUrl, authUrl, logger, network, skipPolling } = this.config;
 
@@ -204,82 +204,82 @@ export class NxtpSdk {
     }
 
     const txManagerConfig: Record<
-      number,
-      {
-        provider: providers.FallbackProvider;
-        transactionManagerAddress: string;
-        priceOracleAddress: string;
-      }
-    > = {};
+        number,
+        {
+          provider: providers.FallbackProvider;
+          transactionManagerAddress: string;
+          priceOracleAddress: string;
+        }
+        > = {};
 
     const subgraphConfig: Record<
-      number,
-      Omit<SubgraphChainConfig, "subgraphSyncBuffer"> & { subgraphSyncBuffer?: number }
-    > = {};
+        number,
+        Omit<SubgraphChainConfig, "subgraphSyncBuffer"> & { subgraphSyncBuffer?: number }
+        > = {};
 
     // create configs for subclasses based on passed-in config
     Object.entries(chainConfig).forEach(
-      ([
-        _chainId,
-        {
-          provider,
-          transactionManagerAddress: _transactionManagerAddress,
-          priceOracleAddress: _priceOracleAddress,
-          subgraph: _subgraph,
-          subgraphSyncBuffer,
+        ([
+           _chainId,
+           {
+             provider,
+             transactionManagerAddress: _transactionManagerAddress,
+             priceOracleAddress: _priceOracleAddress,
+             subgraph: _subgraph,
+             subgraphSyncBuffer,
+           },
+         ]) => {
+          const chainId = parseInt(_chainId);
+          let transactionManagerAddress = _transactionManagerAddress;
+          if (!transactionManagerAddress) {
+            const res = getDeployedTransactionManagerContract(chainId);
+            if (!res || !res.address) {
+              throw new NoTransactionManager(chainId);
+            }
+            transactionManagerAddress = res.address;
+          }
+
+          let priceOracleAddress = _priceOracleAddress;
+          const chainIdsForGasFee = getDeployedChainIdsForGasFee();
+          if (!priceOracleAddress && chainIdsForGasFee.includes(chainId)) {
+            const res = getDeployedPriceOracleContract(chainId);
+            if (!res || !res.address) {
+              throw new NoPriceOracle(chainId);
+            }
+
+            priceOracleAddress = res.address;
+          }
+
+          txManagerConfig[chainId] = {
+            provider,
+            transactionManagerAddress,
+            priceOracleAddress: priceOracleAddress || constants.AddressZero,
+          };
+
+          let subgraph = _subgraph;
+          if (!subgraph) {
+            subgraph = getDeployedSubgraphUri(chainId);
+          }
+          if (!subgraph) {
+            throw new NoSubgraph(chainId);
+          }
+          subgraphConfig[chainId] = {
+            subgraph,
+            provider,
+            subgraphSyncBuffer,
+          };
         },
-      ]) => {
-        const chainId = parseInt(_chainId);
-        let transactionManagerAddress = _transactionManagerAddress;
-        if (!transactionManagerAddress) {
-          const res = getDeployedTransactionManagerContract(chainId);
-          if (!res || !res.address) {
-            throw new NoTransactionManager(chainId);
-          }
-          transactionManagerAddress = res.address;
-        }
-
-        let priceOracleAddress = _priceOracleAddress;
-        const chainIdsForGasFee = getDeployedChainIdsForGasFee();
-        if (!priceOracleAddress && chainIdsForGasFee.includes(chainId)) {
-          const res = getDeployedPriceOracleContract(chainId);
-          if (!res || !res.address) {
-            throw new NoPriceOracle(chainId);
-          }
-
-          priceOracleAddress = res.address;
-        }
-
-        txManagerConfig[chainId] = {
-          provider,
-          transactionManagerAddress,
-          priceOracleAddress: priceOracleAddress || constants.AddressZero,
-        };
-
-        let subgraph = _subgraph;
-        if (!subgraph) {
-          subgraph = getDeployedSubgraphUri(chainId);
-        }
-        if (!subgraph) {
-          throw new NoSubgraph(chainId);
-        }
-        subgraphConfig[chainId] = {
-          subgraph,
-          provider,
-          subgraphSyncBuffer,
-        };
-      },
     );
     this.transactionManager = new TransactionManager(
-      signer,
-      txManagerConfig,
-      this.logger.child({ module: "TransactionManager" }, "debug"),
+        signer,
+        txManagerConfig,
+        this.logger.child({ module: "TransactionManager" }, "debug"),
     );
     this.subgraph = new Subgraph(
-      signer,
-      subgraphConfig,
-      this.logger.child({ module: "Subgraph" }),
-      this.config.skipPolling,
+        signer,
+        subgraphConfig,
+        this.logger.child({ module: "Subgraph" }),
+        this.config.skipPolling,
     );
   }
 
@@ -287,9 +287,9 @@ export class NxtpSdk {
     // Setup the subscriptions
     const token = await this.messaging.connect(bearerToken);
     await this.messaging.subscribeToAuctionResponse(
-      (_from: string, inbox: string, data?: AuctionResponse, err?: any) => {
-        this.auctionResponseEvt.post({ inbox, data, err });
-      },
+        (_from: string, inbox: string, data?: AuctionResponse, err?: any) => {
+          this.auctionResponseEvt.post({ inbox, data, err });
+        },
     );
 
     await this.messaging.subscribeToMetaTxResponse((_from: string, inbox: string, data?: MetaTxResponse, err?: any) => {
@@ -317,11 +317,11 @@ export class NxtpSdk {
   getSubgraphSyncStatus(chainId: number): SubgraphSyncRecord {
     const record = this.subgraph.getSyncStatus(chainId);
     return (
-      record ?? {
-        synced: false,
-        syncedBlock: 0,
-        latestBlock: 0,
-      }
+        record ?? {
+          synced: false,
+          syncedBlock: 0,
+          latestBlock: 0,
+        }
     );
   }
 
@@ -357,9 +357,9 @@ export class NxtpSdk {
   public async getTransferQuote(params: CrossChainParams): Promise<AuctionResponse> {
     const transactionId = params.transactionId ?? getRandomBytes32();
     const { requestContext, methodContext } = createLoggingContext(
-      this.getTransferQuote.name,
-      undefined,
-      transactionId,
+        this.getTransferQuote.name,
+        undefined,
+        transactionId,
     );
 
     this.logger.info("Method started", requestContext, methodContext, { params });
@@ -453,10 +453,10 @@ export class NxtpSdk {
       if (dryRun) {
         try {
           const result = await this.auctionResponseEvt
-            .pipe((data) => data.inbox === inbox)
-            .pipe((data) => !!data.data)
-            .pipe((data) => !data.err)
-            .waitFor(AUCTION_TIMEOUT);
+              .pipe((data) => data.inbox === inbox)
+              .pipe((data) => !!data.data)
+              .pipe((data) => !data.err)
+              .waitFor(AUCTION_TIMEOUT);
           return resolve([result.data!]);
         } catch (e) {
           return reject(e);
@@ -469,11 +469,11 @@ export class NxtpSdk {
         });
         try {
           const result = await this.auctionResponseEvt
-            .pipe((data) => data.inbox === inbox)
-            .pipe((data) => !!data.data)
-            .pipe((data) => !data.err)
-            .pipe((data) => data.data?.bid.router === preferredRouter)
-            .waitFor(AUCTION_TIMEOUT * 2); // wait extra for preferred router
+              .pipe((data) => data.inbox === inbox)
+              .pipe((data) => !!data.data)
+              .pipe((data) => !data.err)
+              .pipe((data) => data.data?.bid.router === preferredRouter)
+              .waitFor(AUCTION_TIMEOUT * 2); // wait extra for preferred router
           return resolve([result.data!]);
         } catch (e) {
           return reject(e);
@@ -483,19 +483,19 @@ export class NxtpSdk {
       const auctionCtx = Evt.newCtx();
       const bids: AuctionResponse[] = [];
       this.auctionResponseEvt
-        .pipe(auctionCtx)
-        .pipe((data) => data.inbox === inbox)
-        .pipe((data) => !!data.data)
-        .pipe((data) => {
-          if (data.err) {
-            this.logger.warn("Invalid bid received", requestContext, methodContext, { inbox, err: data.err });
-            return false;
-          }
-          return true;
-        })
-        .attach((data) => {
-          bids.push(data.data!);
-        });
+          .pipe(auctionCtx)
+          .pipe((data) => data.inbox === inbox)
+          .pipe((data) => !!data.data)
+          .pipe((data) => {
+            if (data.err) {
+              this.logger.warn("Invalid bid received", requestContext, methodContext, { inbox, err: data.err });
+              return false;
+            }
+            return true;
+          })
+          .attach((data) => {
+            bids.push(data.data!);
+          });
 
       setTimeout(async () => {
         this.auctionResponseEvt.detach(auctionCtx);
@@ -538,77 +538,77 @@ export class NxtpSdk {
         return auctionResponses[0];
       }
       const filtered: (AuctionResponse | string)[] = await Promise.all(
-        auctionResponses.map(async (data: AuctionResponse) => {
-          // validate bid
-          // check router sig on bid
-          const signer = recoverAuctionBid(data.bid, data.bidSignature ?? "");
-          if (signer !== data.bid.router) {
-            const msg = "Invalid router signature on bid";
-            this.logger.warn(msg, requestContext, methodContext, { signer, router: data.bid.router });
-            return msg;
-          }
+          auctionResponses.map(async (data: AuctionResponse) => {
+            // validate bid
+            // check router sig on bid
+            const signer = recoverAuctionBid(data.bid, data.bidSignature ?? "");
+            if (signer !== data.bid.router) {
+              const msg = "Invalid router signature on bid";
+              this.logger.warn(msg, requestContext, methodContext, { signer, router: data.bid.router });
+              return msg;
+            }
 
-          // check contract for router liquidity
-          try {
-            const routerLiq = await this.transactionManager.getRouterLiquidity(
-              receivingChainId,
-              data.bid.router,
-              receivingAssetId,
-            );
-            if (routerLiq.lt(data.bid.amountReceived)) {
-              const msg = "Router's liquidity low";
-              this.logger.warn(msg, requestContext, methodContext, {
-                signer,
+            // check contract for router liquidity
+            try {
+              const routerLiq = await this.transactionManager.getRouterLiquidity(
+                  receivingChainId,
+                  data.bid.router,
+                  receivingAssetId,
+              );
+              if (routerLiq.lt(data.bid.amountReceived)) {
+                const msg = "Router's liquidity low";
+                this.logger.warn(msg, requestContext, methodContext, {
+                  signer,
+                  receivingChainId,
+                  receivingAssetId,
+                  router: data.bid.router,
+                  routerLiq: routerLiq.toString(),
+                  amountReceived: data.bid.amountReceived,
+                });
+                return msg;
+              }
+            } catch (err) {
+              const msg = "Error getting router liquidity";
+              this.logger.error(msg, requestContext, methodContext, jsonifyError(err), {
+                sendingChainId,
                 receivingChainId,
-                receivingAssetId,
-                router: data.bid.router,
-                routerLiq: routerLiq.toString(),
-                amountReceived: data.bid.amountReceived,
               });
               return msg;
             }
-          } catch (err) {
-            const msg = "Error getting router liquidity";
-            this.logger.error(msg, requestContext, methodContext, jsonifyError(err), {
-              sendingChainId,
-              receivingChainId,
-            });
-            return msg;
-          }
 
-          // check if the price changes unfovorably by more than the slippage tolerance(percentage).
-          const lowerBoundExchangeRate = (1 - parseFloat(slippageTolerance) / 100).toString();
-          const [inputDecimals, outputDecimals] = await Promise.all([
-            getDecimals(sendingAssetId, sendingProvider),
-            getDecimals(receivingAssetId, receivingProvider),
-          ]);
+            // check if the price changes unfovorably by more than the slippage tolerance(percentage).
+            const lowerBoundExchangeRate = (1 - parseFloat(slippageTolerance) / 100).toString();
+            const [inputDecimals, outputDecimals] = await Promise.all([
+              getDecimals(sendingAssetId, sendingProvider),
+              getDecimals(receivingAssetId, receivingProvider),
+            ]);
 
-          let lowerBound = calculateExchangeWad(
-            BigNumber.from(amount),
-            inputDecimals,
-            lowerBoundExchangeRate,
-            outputDecimals,
-          );
+            let lowerBound = calculateExchangeWad(
+                BigNumber.from(amount),
+                inputDecimals,
+                lowerBoundExchangeRate,
+                outputDecimals,
+            );
 
-          lowerBound = lowerBound.sub(data.gasFeeInReceivingToken);
+            lowerBound = lowerBound.sub(data.gasFeeInReceivingToken);
 
-          // safe calculation if the amountReceived is greater than 4 decimals
-          if (BigNumber.from(data.bid.amountReceived).lt(lowerBound)) {
-            const msg = "Invalid bid price: price impact is more than the slippage tolerance";
-            this.logger.warn(msg, requestContext, methodContext, {
-              signer,
-              lowerBound: lowerBound.toString(),
-              bidAmount: data.bid.amount,
-              gasFeeInReceivingToken: data.gasFeeInReceivingToken,
-              amountReceived: data.bid.amountReceived,
-              slippageTolerance: slippageTolerance,
-              router: data.bid.router,
-            });
-            return msg;
-          }
+            // safe calculation if the amountReceived is greater than 4 decimals
+            if (BigNumber.from(data.bid.amountReceived).lt(lowerBound)) {
+              const msg = "Invalid bid price: price impact is more than the slippage tolerance";
+              this.logger.warn(msg, requestContext, methodContext, {
+                signer,
+                lowerBound: lowerBound.toString(),
+                bidAmount: data.bid.amount,
+                gasFeeInReceivingToken: data.gasFeeInReceivingToken,
+                amountReceived: data.bid.amountReceived,
+                slippageTolerance: slippageTolerance,
+                router: data.bid.router,
+              });
+              return msg;
+            }
 
-          return data;
-        }),
+            return data;
+          }),
       );
 
       const valid = filtered.filter((x) => typeof x !== "string") as AuctionResponse[];
@@ -638,13 +638,13 @@ export class NxtpSdk {
    * @returns A promise with the transactionId and the `TransactionResponse` returned when the prepare transaction was submitted, not mined.
    */
   public async prepareTransfer(
-    transferParams: AuctionResponse,
-    infiniteApprove = false,
+      transferParams: AuctionResponse,
+      infiniteApprove = false,
   ): Promise<{ prepareResponse: providers.TransactionResponse; transactionId: string }> {
     const { requestContext, methodContext } = createLoggingContext(
-      this.prepareTransfer.name,
-      undefined,
-      transferParams.bid.transactionId,
+        this.prepareTransfer.name,
+        undefined,
+        transferParams.bid.transactionId,
     );
 
     this.logger.info("Method started", requestContext, methodContext, { transferParams });
@@ -732,11 +732,11 @@ export class NxtpSdk {
 
     if (sendingAssetId !== constants.AddressZero) {
       const approveTx = await this.transactionManager.approveTokensIfNeeded(
-        sendingChainId,
-        sendingAssetId,
-        amount,
-        infiniteApprove,
-        requestContext,
+          sendingChainId,
+          sendingAssetId,
+          amount,
+          infiniteApprove,
+          requestContext,
       );
 
       if (approveTx) {
@@ -749,16 +749,16 @@ export class NxtpSdk {
         const approveReceipt = await approveTx.wait(1);
         if (approveReceipt?.status === 0) {
           throw new SubmitError(
-            transactionId,
-            sendingChainId,
-            signerAddr,
-            "approve",
-            sendingAssetId,
-            { infiniteApprove, amount },
-            jsonifyError(new Error("Receipt status is 0")),
-            {
-              approveReceipt,
-            },
+              transactionId,
+              sendingChainId,
+              signerAddr,
+              "approve",
+              sendingAssetId,
+              { infiniteApprove, amount },
+              jsonifyError(new Error("Receipt status is 0")),
+              {
+                approveReceipt,
+              },
           );
         }
         this.logger.info("Mined approve tx", requestContext, methodContext, {
@@ -813,14 +813,14 @@ export class NxtpSdk {
    * @returns An object containing either the TransactionResponse from self-submitting the fulfill transaction, or the Meta-tx response (if you used meta transactions)
    */
   public async fulfillTransfer(
-    params: Omit<TransactionPreparedEvent, "caller">,
-    relayerFee = "0",
-    useRelayers = true,
+      params: Omit<TransactionPreparedEvent, "caller">,
+      relayerFee = "0",
+      useRelayers = true,
   ): Promise<{ fulfillResponse?: providers.TransactionResponse; metaTxResponse?: MetaTxResponse }> {
     const { requestContext, methodContext } = createLoggingContext(
-      this.fulfillTransfer.name,
-      undefined,
-      params.txData.transactionId,
+        this.fulfillTransfer.name,
+        undefined,
+        params.txData.transactionId,
     );
     this.logger.info("Method started", requestContext, methodContext, { params, useRelayers });
 
@@ -856,9 +856,9 @@ export class NxtpSdk {
     if (useRelayers && chainIdsForPriceOracle.includes(txData.receivingChainId)) {
       const gasNeeded = await this.estimateFulfillFee(txData, relayerFee, requestContext, methodContext);
       this.logger.info(
-        `Calculating Gas Fee for fulfill tx. neededGas = ${gasNeeded.toString()}`,
-        requestContext,
-        methodContext,
+          `Calculating Gas Fee for fulfill tx. neededGas = ${gasNeeded.toString()}`,
+          requestContext,
+          methodContext,
       );
 
       calculateRelayerFee = gasNeeded.toString();
@@ -866,11 +866,11 @@ export class NxtpSdk {
 
     this.logger.info("Generating fulfill signature", requestContext, methodContext);
     const signature = await signFulfillTransactionPayload(
-      txData.transactionId,
-      calculateRelayerFee,
-      txData.receivingChainId,
-      txData.receivingChainTxManagerAddress,
-      this.config.signer,
+        txData.transactionId,
+        calculateRelayerFee,
+        txData.receivingChainId,
+        txData.receivingChainTxManagerAddress,
+        this.config.signer,
     );
 
     this.logger.info("Generated signature", requestContext, methodContext, { signature });
@@ -895,10 +895,10 @@ export class NxtpSdk {
       const responseInbox = generateMessagingInbox();
 
       const metaTxProm = this.metaTxResponseEvt
-        .pipe((data) => data.inbox === responseInbox)
-        .pipe((data) => !!data.data?.transactionHash)
-        .pipe((data) => !data.err)
-        .waitFor(META_TX_TIMEOUT);
+          .pipe((data) => data.inbox === responseInbox)
+          .pipe((data) => !!data.data?.transactionHash)
+          .pipe((data) => !data.err)
+          .waitFor(META_TX_TIMEOUT);
 
       const request = {
         type: MetaTxTypes.Fulfill,
@@ -913,12 +913,10 @@ export class NxtpSdk {
         },
       };
       await this.messaging.publishMetaTxRequest(request, responseInbox);
-      let response = undefined;
-      while(!response){ 
-      try {
-        response = await metaTxProm;
 
-	const metaTxRes = response?.data;
+      try {
+        const response = await metaTxProm;
+        const metaTxRes = response.data;
         this.logger.info("Method complete", requestContext, methodContext, {
           txHash: metaTxRes?.transactionHash,
           chainId: metaTxRes?.chainId,
@@ -927,19 +925,17 @@ export class NxtpSdk {
       } catch (e) {
         throw e.message.includes("Evt timeout") ? new MetaTxTimeout(txData.transactionId, META_TX_TIMEOUT, request) : e;
       }
-    }
-    setTimeout(()=>{}, 2000);
     } else {
       this.logger.info("Fulfilling with user's signer", requestContext, methodContext);
       const fulfillResponse = await this.transactionManager.fulfill(
-        txData.receivingChainId,
-        {
-          callData,
-          relayerFee: calculateRelayerFee,
-          signature,
-          txData,
-        },
-        requestContext,
+          txData.receivingChainId,
+          {
+            callData,
+            relayerFee: calculateRelayerFee,
+            signature,
+            txData,
+          },
+          requestContext,
       );
 
       this.logger.info("Method complete", requestContext, methodContext, { txHash: fulfillResponse.hash });
@@ -948,17 +944,17 @@ export class NxtpSdk {
   }
 
   public async estimateFulfillFee(
-    txData: TransactionData,
-    relayerFee: string,
-    requestContext: RequestContext,
-    methodContext: MethodContext,
+      txData: TransactionData,
+      relayerFee: string,
+      requestContext: RequestContext,
+      methodContext: MethodContext,
   ): Promise<BigNumber> {
     const signatureForFee = await signFulfillTransactionPayload(
-      txData.transactionId,
-      relayerFee,
-      txData.receivingChainId,
-      txData.receivingChainTxManagerAddress,
-      this.config.signer,
+        txData.transactionId,
+        relayerFee,
+        txData.receivingChainId,
+        txData.receivingChainTxManagerAddress,
+        this.config.signer,
     );
 
     const gasNeeded = await this.transactionManager.calculateGasInTokenForFullfil(txData.receivingChainId, {
@@ -973,16 +969,16 @@ export class NxtpSdk {
 
     if (gasNeeded.isZero()) {
       const error = new InvalidParamStructure(
-        "calculateGasInToken",
-        "TransactionManager",
-        "Failed to calculate a gas fee in token",
-        {
-          relayerFee: relayerFee,
-          signatureForFee: signatureForFee,
-          txData: txData,
-          callDataHash: utils.keccak256("0x"),
-          callData: "0x",
-        },
+          "calculateGasInToken",
+          "TransactionManager",
+          "Failed to calculate a gas fee in token",
+          {
+            relayerFee: relayerFee,
+            signatureForFee: signatureForFee,
+            txData: txData,
+            callDataHash: utils.keccak256("0x"),
+            callData: "0x",
+          },
       );
       this.logger.error("Failed to calculate gas in token", requestContext, methodContext, jsonifyError(error));
 
@@ -1005,9 +1001,9 @@ export class NxtpSdk {
 
   public async cancel(cancelParams: CancelParams, chainId: number): Promise<providers.TransactionResponse> {
     const { requestContext, methodContext } = createLoggingContext(
-      this.cancel.name,
-      undefined,
-      cancelParams.txData.transactionId,
+        this.cancel.name,
+        undefined,
+        cancelParams.txData.transactionId,
     );
     this.logger.info("Method started", requestContext, methodContext, { chainId, cancelParams });
 
@@ -1060,10 +1056,10 @@ export class NxtpSdk {
    * @param timeout - (optional) A timeout to detach the handler within. I.e. if no events fired within the timeout, then the handler is detached
    */
   public attach<T extends NxtpSdkEvent>(
-    event: T,
-    callback: (data: NxtpSdkEventPayloads[T]) => void,
-    filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
-    timeout?: number,
+      event: T,
+      callback: (data: NxtpSdkEventPayloads[T]) => void,
+      filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
+      timeout?: number,
   ): void {
     const args = [timeout, callback].filter((x) => !!x);
     if (Object.keys(SubgraphEvents).includes(event)) {
@@ -1083,10 +1079,10 @@ export class NxtpSdk {
    *
    */
   public attachOnce<T extends NxtpSdkEvent>(
-    event: T,
-    callback: (data: NxtpSdkEventPayloads[T]) => void,
-    filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
-    timeout?: number,
+      event: T,
+      callback: (data: NxtpSdkEventPayloads[T]) => void,
+      filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
+      timeout?: number,
   ): void {
     const args = [timeout, callback].filter((x) => !!x);
     if (Object.keys(SubgraphEvents).includes(event)) {
@@ -1126,9 +1122,9 @@ export class NxtpSdk {
    *
    */
   public waitFor<T extends NxtpSdkEvent>(
-    event: T,
-    timeout: number,
-    filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
+      event: T,
+      timeout: number,
+      filter: (data: NxtpSdkEventPayloads[T]) => boolean = (_data: NxtpSdkEventPayloads[T]) => true,
   ): Promise<NxtpSdkEventPayloads[T]> {
     if (Object.keys(SubgraphEvents).includes(event)) {
       return this.subgraph.waitFor(event as SubgraphEvent, timeout, filter as any) as Promise<NxtpSdkEventPayloads[T]>;
