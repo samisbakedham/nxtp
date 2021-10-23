@@ -32,6 +32,10 @@ export default task("renounce-ownership", "Renounce Ownership")
       ownershipTimestampFunction = txManager.assetOwnershipTimestamp;
       // proposeRenunciationFunction = txManager.proposeAssetOwnershipRenunciation;
       renounceFunction = txManager.renounceAssetOwnership;
+    } else if (type === "all") {
+      isRenouncedFunction = txManager.renounced;
+      ownershipTimestampFunction = txManager.proposedTimestamp;
+      renounceFunction = txManager.renounceOwnership;
     } else {
       throw new Error("Unsupported type");
     }
