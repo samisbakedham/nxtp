@@ -348,6 +348,7 @@ export class NxtpSdkBase {
       preferredRouters: _preferredRouters,
       initiator,
     } = params;
+    console.log(`Chain config from SDK: ${JSON.stringify(this.config)}`)
     if (!this.config.chainConfig[sendingChainId]) {
       throw new ChainNotConfigured(sendingChainId, Object.keys(this.config.chainConfig));
     }

@@ -17,11 +17,11 @@ export default task("add-router", "Add a router")
     console.log("txManagerAddress: ", txManagerAddress);
 
     const txManager = await ethers.getContractAt("TransactionManager", txManagerAddress);
-    const tx = await txManager.addRouter(router, { from: namedAccounts.deployer });
+    const tx = await txManager.approvedRouters("0x2F1E5F45F805beB66cB0eD037e738a0d9b1A595C");
     console.log("addRouter tx: ", tx);
-    const receipt = await tx.wait();
-    console.log("addRouter tx mined: ", receipt.transactionHash);
-
-    const isRouterApproved = await txManager.approvedRouters(router);
-    console.log("isRouterApproved: ", isRouterApproved);
+    // const receipt = await tx.wait();
+    // console.log("addRouter tx mined: ", receipt.transactionHash);
+    //
+    // const isRouterApproved = await txManager.approvedRouters(router);
+    // console.log("isRouterApproved: ", isRouterApproved);
   });

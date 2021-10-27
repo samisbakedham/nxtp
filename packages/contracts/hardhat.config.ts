@@ -90,7 +90,7 @@ const config: HardhatUserConfig = {
     goerli: {
       accounts: { mnemonic },
       chainId: 5,
-      url: urlOverride || process.env.GOERLI_ETH_PROVIDER_URL || "http://localhost:8545",
+      url: urlOverride || process.env.GOERLI_ETH_PROVIDER_URL || "https://goerli.infura.io/v3/19b854cad0bc4089bffd0c93f23ece9f",
     },
     kovan: {
       accounts: { mnemonic },

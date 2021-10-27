@@ -26,7 +26,8 @@
     "docker:all:down": "docker-compose -f ops/chains.docker-compose.yml -f ops/messaging.docker-compose.yml -f ops/router.docker-compose.yml down",
     "concurrency:router": "ts-node ./test/load/routerConcurrency.ts",
     "cyclical:router": "ts-node ./test/load/routerCyclical.ts",
-    "concurrency:txservice": "ts-node ./test/load/txserviceConcurrency.ts"
+    "concurrency:txservice": "ts-node ./test/load/txserviceConcurrency.ts",
+    "multi": "ts-node ./test/load/simpleMulti.ts"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
