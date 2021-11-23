@@ -189,10 +189,6 @@ export class ChainRpcProvider {
         // DEBUGGING:
         for (const provider of this._providers) {
           try {
-            // This call will prepare the transaction params for us (hexlify tx, etc).
-            // TODO: #147 Is there any reason prepare should be called for each iteration?
-            // const args = provider.prepareRequest("estimateGas", { transaction });
-            // return await provider.send(args[0], args[1]);
             const params = await resolveProperties({
                 transaction: (provider as any)._getTransactionRequest(tx),
                 blockTag: (provider as any)._getBlockTag(undefined),
