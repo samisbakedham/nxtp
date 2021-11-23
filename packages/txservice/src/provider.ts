@@ -9,6 +9,7 @@ import {
 } from "@connext/nxtp-utils";
 import axios from "axios";
 import { BigNumber, Signer, Wallet, providers, constants, Contract, utils } from "ethers";
+import { resolveProperties } from "ethers/lib/utils";
 import { okAsync, ResultAsync } from "neverthrow";
 
 import { TransactionServiceConfig, validateProviderConfig, ChainConfig } from "./config";
@@ -167,6 +168,7 @@ export class ChainRpcProvider {
       () => {
         // The only way to access the functionality internal to ethers for handling replacement tx.
         // See issue: https://github.com/ethers-io/ethers.js/issues/1775
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         return Promise.race(transaction.responses.map((response) => (response as any).wait(confirmations, timeout)));
       },
       false,
@@ -184,6 +186,30 @@ export class ChainRpcProvider {
   public readTransaction(tx: ReadTransaction): ResultAsync<string, TransactionError> {
     return this.resultWrapper<string>(true, async () => {
       try {
+        // DEBUGGING:
+        for (const provider of this._providers) {
+          try {
+            // This call will prepare the transaction params for us (hexlify tx, etc).
+            // TODO: #147 Is there any reason prepare should be called for each iteration?
+            // const args = provider.prepareRequest("estimateGas", { transaction });
+            // return await provider.send(args[0], args[1]);
+            const params = await resolveProperties({
+                transaction: (provider as any)._getTransactionRequest(tx),
+                blockTag: (provider as any)._getBlockTag(undefined),
+            });
+            return await provider.perform("call", params);
+          } catch (error) {
+            this.logger.warn("Reading error", undefined, undefined, { error });
+            const sanitizedError = parseError(error);
+            // If we get a TransactionReverted error, we can assume that the transaction will fail,
+            // and we ought to just throw here.
+            if (sanitizedError.type === TransactionReverted.type) {
+              throw sanitizedError;
+            } else {
+              continue;
+            }
+          }
+        }
         return await this.provider.call(tx);
       } catch (error) {
         throw new TransactionReadError(TransactionReadError.reasons.ContractReadError, {
