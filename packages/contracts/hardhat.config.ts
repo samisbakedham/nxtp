@@ -162,6 +162,11 @@ const config: HardhatUserConfig = {
       chainId: 43114,
       accounts: { mnemonic },
     },
+    "godwoken-testnet": {
+      url: "https://godwoken-testnet-web3-rpc.ckbapp.dev",
+      chainId: 71393,
+      accounts: { mnemonic },
+    },
     mumbai: {
       accounts: { mnemonic },
       chainId: 80001,
