@@ -13,8 +13,22 @@ import { ReadTransaction } from "./types";
 import { ChainRpcProvider } from "./provider";
 import { ChainNotSupported, ConfigurationError, ProviderNotConfigured } from "./error";
 import { CHAINS_WITH_PRICE_ORACLES, getDeployedPriceOracleContract, getPriceOracleInterface } from "./contracts";
+import { PermanentCache, TempCache } from ".";
 
-export const cachedPriceMap: Map<string, { timestamp: number; price: BigNumber }> = new Map();
+type ChainCache = TempCache<{
+  gasPrice: BigNumber;
+  transactionCount: number,
+  tokenPrices: TempCache<{ [assetId: string]: number }>,
+  decimals: PermanentCache<{ [assetId: string]: number }>,
+}>
+
+const testCache = new TempCache<{ [assetId: string]: number }>(1);
+
+// Schema for chain reader's cached values.
+export type ChainReaderCache = {
+  [chainId: string]: ChainCache
+};
+
 // TODO: I do not like that this is generally a passthrough class now - all it handles is the mapping. We should
 // probably just expose a provider getter method and have the consumer call that to access the target ChainRpcProvider
 // directly.
@@ -24,6 +38,9 @@ export const cachedPriceMap: Map<string, { timestamp: number; price: BigNumber }
 export class ChainReader {
   protected providers: Map<number, ChainRpcProvider> = new Map();
   protected readonly config: TransactionServiceConfig;
+
+  // Cache of transient data (i.e. data that can change per block).
+  private cache: TempCache<ChainReaderCache>;
 
   /**
    * A singleton-like interface for handling all logic related to conducting on-chain transactions.
@@ -44,6 +61,18 @@ export class ChainReader {
     this.config = Object.assign(DEFAULT_CONFIG, config);
     validateTransactionServiceConfig(this.config);
     this.setupProviders(requestContext, signer);
+
+    // Set up the cache.
+    const chainCaches: { [chainId: number]: TempCache<ChainCache> } = {};
+    Object.keys(this.config.chains).forEach((chainId) => {
+      chainCaches[parseInt(chainId)] = new TempCache<ChainCache>({
+        gasPrice: 5_000,
+        transactionCount: 2_000,
+        tokenPrices: new TempCache<{ [assetId: string]: number }>(5_000),
+        decimals: new PermanentCache<{ [assetId: string]: number }>(),
+      });
+    });
+    this.cache = new TempCache<ChainReaderCache>(chainCaches);
   }
 
   /// CHAIN READING METHODS

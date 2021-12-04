@@ -9,6 +9,7 @@ import {
 } from "@connext/nxtp-utils";
 import axios from "axios";
 import { BigNumber, Signer, Wallet, providers, constants, Contract, utils } from "ethers";
+import { ChainReaderCache } from ".";
 
 import { TransactionServiceConfig, validateProviderConfig, ChainConfig } from "./config";
 import {
@@ -21,7 +22,7 @@ import {
   TransactionReadError,
   TransactionReverted,
 } from "./error";
-import { ProviderCache, ReadTransaction, SyncProvider, OnchainTransaction } from "./types";
+import { TempCache, ReadTransaction, SyncProvider, OnchainTransaction } from "./types";
 
 const { FallbackProvider } = providers;
 
@@ -30,8 +31,6 @@ const { FallbackProvider } = providers;
 const PROVIDER_MAX_LAG = 30;
 // Default value for block period time (in ms) if we're unable to attain that info from the providers for some reason.
 const DEFAULT_BLOCK_PERIOD = 2_000;
-
-type ChainRpcProviderCache = { gasPrice: BigNumber; transactionCount: number };
 
 /**
  * @classdesc A transaction service provider wrapper that handles the connections to remote providers and parses
@@ -49,13 +48,8 @@ export class ChainRpcProvider {
 
   private lastUsedGasPrice: BigNumber | undefined = undefined;
 
-  // Cached decimal values per asset. Saved separately from main cache as decimals obviously don't expire.
-  private cachedDecimals: Record<string, number> = {};
   // Cached block length in time (ms), used for optimizing waiting periods.
   private blockPeriod: number = DEFAULT_BLOCK_PERIOD;
-
-  // Cache of transient data (i.e. data that can change per block).
-  private cache: ProviderCache<ChainRpcProviderCache>;
 
   public readonly confirmationsRequired: number;
   public readonly confirmationTimeout: number;
@@ -79,6 +73,7 @@ export class ChainRpcProvider {
     public readonly chainId: number,
     protected readonly chainConfig: ChainConfig,
     protected readonly config: TransactionServiceConfig,
+    protected readonly cache: TempCache<ChainReaderCache>,
     signer?: string | Signer,
   ) {
     const { requestContext, methodContext } = createLoggingContext("ChainRpcProvider.constructor");
@@ -135,16 +130,6 @@ export class ChainRpcProvider {
     } else {
       this.signer = undefined;
     }
-
-    // TODO: Make ttl/btl values below configurable ?
-    this.cache = new ProviderCache<ChainRpcProviderCache>(this.logger, {
-      gasPrice: {
-        ttl: 30_000,
-      },
-      transactionCount: {
-        ttl: 2_000,
-      },
-    });
 
     // This initial call of sync providers will start the first block listener (on the lead provider) and set up
     // the cache with correct initial values (as well as establish which providers are out-of-sync).
