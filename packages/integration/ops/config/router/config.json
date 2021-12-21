@@ -1,37 +1,40 @@
 {
   "adminToken": "blahblah",
   "chainConfig": {
-    "1337": {
-      "providers": ["http://chain-1337:8545"],
-      "confirmations": 1,
-      "subgraph": "http://graph-node-1337:8000/subgraphs/name/connext/nxtp",
-      "transactionManagerAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0"
-    },
-    "1338": {
-      "providers": ["http://chain-1338:8545"],
-      "confirmations": 1,
-      "subgraph": "http://graph-node-1338:8000/subgraphs/name/connext/nxtp",
-      "transactionManagerAddress": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0"
-    }
-  },
-  "logLevel": "info",
-  "natsUrl": "nats://nats:4222",
-  "authUrl": "http://auth:5040",
-  "web3SignerUrl": "http://signer:9000",
-  "allowRelay": true,
-  "swapPools": [
-    {
-      "name": "TEST",
-      "assets": [
-        { "chainId": 1337, "assetId": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F" },
-        { "chainId": 1338, "assetId": "0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F" }
+    "1": {
+      "providers": [
+        "https://mainnet.infura.io/v3/19b854cad0bc4089bffd0c93f23ece9f",
+        "https://mainnet.infura.io/v3/5acf1faf05374b42acd211340f36d00a",
+        "https://mainnet.infura.io/v3/1c5b4e8a3cde459b929e891c9d4e0925"
       ]
     },
+    "137": {
+      "providers": [
+        "https://polygon-mainnet.g.alchemy.com/v2/8POGLLGA1mPpC6OZkBWNbGZ8hHgBF9Ae",
+        "https://polygon-rpc.com"
+      ]
+    },
+    "250": {
+      "providers": [
+        "https://morning-blue-darkness.fantom.quiknode.pro/2bb9f35c149d56e54a72ea63773ed945aa53ddc7/",
+        "https://rpc.ftm.tools/"
+      ],
+      "minGas": "100000000000000"
+    }
+  },
+  "logLevel": "debug",
+  "network": "local",
+  "natsUrl": "nats://nats-test:4222",
+  "authUrl": "http://auth-test:5040",
+  "routerContractAddress": "0x6f41Ff4425E6051b3b941e3d721d29199480Ab58",
+
+  "diagnosticMode": false,
+  "swapPools": [
     {
-      "name": "NATIVE",
+      "name": "DAI",
       "assets": [
-        { "chainId": 1337, "assetId": "0x0000000000000000000000000000000000000000" },
-        { "chainId": 1338, "assetId": "0x0000000000000000000000000000000000000000" }
+        { "chainId": 137, "assetId": "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063" },
+        { "chainId": 250, "assetId": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e" }
       ]
     }
   ]
