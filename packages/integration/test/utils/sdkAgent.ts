@@ -331,6 +331,7 @@ export class SdkAgent {
           });
           try {
             const prepareTxfr = await this.sdk.prepareTransfer(auction, true);
+            
             this.logger.debug(`Prepared xfr object ${prepareTxfr}`);
             const receipt = await prepareTxfr.prepareResponse.wait();
             this.logger.debug("Prepare tx confirmed", requestContext, methodContext, { hash: receipt.transactionHash });

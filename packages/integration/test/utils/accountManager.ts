@@ -24,9 +24,9 @@ export class OnchainAccountManager {
     public readonly num_users: number,
     private readonly log: Logger,
     public readonly MINIMUM_ETH_FUNDING_MULTIPLE = 1,
-    public readonly MINIMUM_TOKEN_FUNDING_MULTIPLE = 5,
+    public readonly MINIMUM_TOKEN_FUNDING_MULTIPLE = 2,
     private readonly USER_MIN_ETH = utils.parseEther("0.1"),
-    private readonly USER_MIN_TOKEN = "10000",
+    private readonly USER_MIN_TOKEN = "1",
   ) {
     this.funder = Wallet.fromMnemonic(mnemonic);
     for (let i = 0; i < num_users; i++) {
