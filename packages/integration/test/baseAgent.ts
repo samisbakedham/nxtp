@@ -2,8 +2,11 @@ import { ethers, providers, Signer } from "ethers";
 import { Logger, UserNxtpNatsMessagingService, ChainData, getRandomBytes32, createLoggingContext, AuctionBid, AuctionResponse } from "@connext/nxtp-utils";
 import { SdkBaseChainConfigParams, NxtpSdkBase, getMinExpiryBuffer, CrossChainParams} from "@connext/nxtp-sdk";
 import { getConfig } from "./utils/config";
+import { ChainConfig } from "./utils/config";
 
-//need to sepearate signer and sdk "write" optional transaction parameters as well as per chain logic.  
+//need to sepearate signer and sdk "write" optional transaction parameters as well as per chain logic. 
+//should be instantiated on a per-signer-key basis
+//this class should handle the dimensions of chain variant parameters, ex. chainId 
 
 export class BaseAgent {
 
@@ -17,8 +20,8 @@ export class BaseAgent {
 
   constructor(
     private readonly config: {
-      chainConfig: SdkBaseChainConfigParams;
-      signer: Signer;
+      chainConfig: ChainConfig;
+      signer?: Signer;
       messagingSigner?: Signer;
       logger?: Logger;
       network?: "testnet" | "mainnet" | "local";
@@ -125,7 +128,17 @@ export class BaseAgent {
     }
   }
 
-  validateSignerChainid(txRequest:providers.TransactionRequest){
+  async getSignerChainId():Promise<number>{
+    return await this.connectedSigner.getChainId();
+  }
+
+  switchSignerChainId(chainId:number){
+    //useful for either side of the ping-pong when, ex. crosschain prepares.
+    const newSigner = this.signerByChainId?.get(chainId);
+    if(newSigner)
+      this.connectedSigner = newSigner;
+  }
+  async validateSignerChainid(txRequest:providers.TransactionRequest){
     const txChainId = txRequest.chainId;
     const connectedChainId = await this.getSignerChainId();
       //switch signer to appropriate chain if needed
@@ -135,21 +148,19 @@ export class BaseAgent {
         this.switchSignerChainId(txChainId);
       }
   }
+  //should instantiate the in class signer to be a signer with the matching chainId.
+  getOrCreateSignerByChainId(chainId:number):Signer | undefined {
+    if(this.signerByChainId){
+      const signer = this.signerByChainId.get(chainId);
+      if(signer){
+        return signer;
+      }else{
+        return;
+      }
+    }
+    return;
+}
 
-  getOrCreateSignerByChainId(chainId:number){
-
-  }
-
-  switchSignerChainId(chainId:number){
-    //useful for either side of the ping-pong when, ex. crosschain prepares.
-    const newSigner = this.signerByChainId?.get(chainId);
-    if(newSigner)
-      this.connectedSigner = newSigner;
-  }
-
-  async getSignerChainId():Promise<number>{
-    return await this.connectedSigner.getChainId();
-  }
 
   async initTransfer(params:Omit<CrossChainParams, "receivingAddress" | "expiry"> & { receivingAddress?: string }){
     const bid = await this.createBid(params);
@@ -158,12 +169,12 @@ export class BaseAgent {
     if(auctionRes){
       const transferData = await this.prepareXfr(auctionRes);
         if(transferData){
-          this.validateSignerChainid(transferData);
+          await this.validateSignerChainid(transferData);
           await this.connectedSigner.sendTransaction(transferData);
         }
       }
       
     }
-    
-  }
+
 }
+

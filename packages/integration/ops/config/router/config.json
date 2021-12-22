@@ -28,6 +28,7 @@
   "authUrl": "http://auth-test:5040",
   "routerContractAddress": "0x6f41Ff4425E6051b3b941e3d721d29199480Ab58",
 
+  "mnemonic": "route book antenna pilot sauce traffic artefact lumber phone beef hard derive",
   "diagnosticMode": false,
   "swapPools": [
     {

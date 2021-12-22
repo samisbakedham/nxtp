@@ -46,6 +46,8 @@ ARG APP_NAME
 RUN yarn workspaces focus --production ${APP_NAME}
 RUN yarn dlx -p @jtbennett/ts-project-scripts tsp bundle $APP_NAME --out-dir /tmp/bundle
 
+COPY packages/txservice /tmp/bundle
+
 
 # ----------------------------------------
 # Copy files to the deployment image.
