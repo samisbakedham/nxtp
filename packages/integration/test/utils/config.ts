@@ -97,3 +97,4 @@ export const getConfig = (useDefaultLocal = false): Config => {
     chainConfig,
   };
 };
+
