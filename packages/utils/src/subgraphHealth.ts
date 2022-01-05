@@ -1,4 +1,5 @@
 import axios from "axios";
+import { resourceLimits } from "worker_threads";
 
 // TODO get from chainData
 const GET_SUBGRAPH_HEALTH_URL = (url: string): string | undefined => {
@@ -21,7 +22,7 @@ type SubgraphHealthError = {
   handler: any;
 };
 
-type SubgraphHealth = {
+export type SubgraphHealth = {
   chainHeadBlock: number;
   latestBlock: number;
   lastHealthyBlock: number | undefined;
@@ -52,7 +53,7 @@ type SubgraphHealth = {
  * - synced: whether the subgraph is synced to the network
  */
 
-export const getSubgraphHealth = async (subgraphName: string, url: string): Promise<SubgraphHealth | undefined> => {
+export const getSubgraphHealth = async (subgraphName: string, url: string): Promise<any | undefined> => {
   const healthUrl = GET_SUBGRAPH_HEALTH_URL(url);
   if (!healthUrl) {
     return undefined;
@@ -115,9 +116,10 @@ export const getSubgraphHealth = async (subgraphName: string, url: string): Prom
     const status = res.data.data.indexingStatusForCurrentVersion;
     const networkInfo = status.chains[0];
     const record = {
-      chainHeadBlock: parseInt(networkInfo.chainHeadBlock.number),
-      latestBlock: parseInt(networkInfo.latestBlock.number),
-      lastHealthyBlock: parseInt(networkInfo.lastHealthyBlock.number),
+      //these properties may not exist if the endpoint is null
+      chainHeadBlock: parseInt(networkInfo.chainHeadBlock?.number),
+      latestBlock: parseInt(networkInfo.latestBlock?.number),
+      lastHealthyBlock: parseInt(networkInfo.lastHealthyBlock?.number),
       network: networkInfo.network,
       fatalError: status.fatalError,
       health: status.health,
