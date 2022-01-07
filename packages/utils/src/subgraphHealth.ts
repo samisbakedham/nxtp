@@ -2,10 +2,29 @@ import axios from "axios";
 
 // TODO get from chainData
 const GET_SUBGRAPH_HEALTH_URL = (url: string): string | undefined => {
-  if (url.includes("connext.bwarelabs.com/subgraphs/name/connext")) {
+  // bware
+  if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-bsc")) {
     return "https://connext.bwarelabs.com/bsc/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-mainnet")) {
+    return "https://connext.bwarelabs.com/ethereum/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-xdai")) {
+    return "https://connext.bwarelabs.com/xdai/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-matic")) {
+    return "https://connext.bwarelabs.com/matic/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-fantom")) {
+    return "https://connext.bwarelabs.com/fantom/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-moonriver")) {
+    return "https://connext.bwarelabs.com/moonriver/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-avalanche")) {
+    return "https://connext.bwarelabs.com/avalanche/index-node/graphql";
+  } else if (url.includes("connext.bwarelabs.com/subgraphs/name/connext/nxtp-arbitrum")) {
+    return "https://connext.bwarelabs.com/arbitrum/index-node/graphql";
+
+    // thegraph
   } else if (url.includes("api.thegraph.com/subgraphs/name/connext")) {
     return "https://api.thegraph.com/index-node/graphql";
+
+    // p2p
   } else if (url.includes("subgraphs.connext.p2p.org/subgraphs/name/connext/nxtp-bsc")) {
     return "https://subgraphs.connext.p2p.org/nxtp-bsc-health-check";
   } else if (url.includes("subgraphs.connext.p2p.org/subgraphs/name/connext/nxtp-matic")) {
@@ -13,7 +32,6 @@ const GET_SUBGRAPH_HEALTH_URL = (url: string): string | undefined => {
   }
   return undefined;
 };
-
 // TODO: Make an actual error type for this?
 type SubgraphHealthError = {
   message: string;
