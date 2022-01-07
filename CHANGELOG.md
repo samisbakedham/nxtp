@@ -3,6 +3,7 @@
 ## Next Release
 
 - [router] Update gas consumed, relayer fees tracking
+- [utils] Fix subgraph health URLs
 
 ## 0.1.12
 
