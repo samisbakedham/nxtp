@@ -9,7 +9,7 @@ import "./lib/LibAsset.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
+import "@openzeppelin/contracts/utils/Multicall.sol";
 
 /**
   *
@@ -51,7 +51,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
   *         unilaterally by the person owed funds on that chain (router for 
   *         sending chain, user for receiving chain) prior to expiry.
   */
-contract TransactionManager is ReentrancyGuard, ProposedOwnable, ITransactionManager {
+contract TransactionManager is ReentrancyGuard, ProposedOwnable, Multicall, ITransactionManager {
   /**
    * @dev Mapping of router to balance specific to asset
    */
