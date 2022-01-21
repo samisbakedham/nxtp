@@ -32,6 +32,7 @@ interface TransactionManagerInterface extends ethers.utils.Interface {
     "approvedAssets(address)": FunctionFragment;
     "approvedRouters(address)": FunctionFragment;
     "assetOwnershipTimestamp()": FunctionFragment;
+    "batchcall(bytes[])": FunctionFragment;
     "cancel(tuple)": FunctionFragment;
     "delay()": FunctionFragment;
     "fulfill(tuple)": FunctionFragment;
@@ -92,6 +93,10 @@ interface TransactionManagerInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "assetOwnershipTimestamp",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "batchcall",
+    values: [BytesLike[]]
   ): string;
   encodeFunctionData(
     functionFragment: "cancel",
@@ -288,6 +293,7 @@ interface TransactionManagerInterface extends ethers.utils.Interface {
     functionFragment: "assetOwnershipTimestamp",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "batchcall", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "cancel", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "delay", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "fulfill", data: BytesLike): Result;
@@ -488,6 +494,11 @@ export class TransactionManager extends BaseContract {
 
     assetOwnershipTimestamp(overrides?: CallOverrides): Promise<[BigNumber]>;
 
+    batchcall(
+      data: BytesLike[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     cancel(
       args: {
         txData: {
@@ -684,6 +695,11 @@ export class TransactionManager extends BaseContract {
 
   assetOwnershipTimestamp(overrides?: CallOverrides): Promise<BigNumber>;
 
+  batchcall(
+    data: BytesLike[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   cancel(
     args: {
       txData: {
@@ -869,6 +885,8 @@ export class TransactionManager extends BaseContract {
     approvedRouters(arg0: string, overrides?: CallOverrides): Promise<boolean>;
 
     assetOwnershipTimestamp(overrides?: CallOverrides): Promise<BigNumber>;
+
+    batchcall(data: BytesLike[], overrides?: CallOverrides): Promise<string[]>;
 
     cancel(
       args: {
@@ -1849,6 +1867,11 @@ export class TransactionManager extends BaseContract {
 
     assetOwnershipTimestamp(overrides?: CallOverrides): Promise<BigNumber>;
 
+    batchcall(
+      data: BytesLike[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     cancel(
       args: {
         txData: {
@@ -2050,6 +2073,11 @@ export class TransactionManager extends BaseContract {
 
     assetOwnershipTimestamp(
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    batchcall(
+      data: BytesLike[],
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     cancel(
