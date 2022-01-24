@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { BigInt, dataSource } from "@graphprotocol/graph-ts";
+import { BigInt, Address, dataSource } from "@graphprotocol/graph-ts";
 
 import {
   TransactionManager,
@@ -9,7 +9,7 @@ import {
   TransactionFulfilled,
   TransactionPrepared,
 } from "../../generated/TransactionManager/TransactionManager";
-import { Transaction, AssetBalance, Router, User } from "../../generated/schema";
+import { Transaction, AssetBalance, Router, User, Gas } from "../../generated/schema";
 
 /**
  * Updates the subgraph records when LiquidityAdded events are emitted. Will create a Router record if it does not exist
@@ -65,6 +65,7 @@ export function handleLiquidityRemoved(event: LiquidityRemoved): void {
 export function handleTransactionPrepared(event: TransactionPrepared): void {
   // load user and router
   // router should have liquidity but it may not
+  const chainId = getChainId(event.address);
   let router = Router.load(event.params.txData.router.toHex());
   if (router == null) {
     router = new Router(event.params.txData.router.toHex());
@@ -76,49 +77,6 @@ export function handleTransactionPrepared(event: TransactionPrepared): void {
     user = new User(event.params.txData.user.toHex());
     user.save();
   }
-
-  // try to get chainId from the mapping
-  let network = dataSource.network();
-  let chainId: BigInt;
-  if (network == "mainnet") {
-    chainId = BigInt.fromI32(1);
-  } else if (network == "ropsten") {
-    chainId = BigInt.fromI32(3);
-  } else if (network == "rinkeby") {
-    chainId = BigInt.fromI32(4);
-  } else if (network == "goerli") {
-    chainId = BigInt.fromI32(5);
-  } else if (network == "optimism") {
-    chainId = BigInt.fromI32(10);
-  } else if (network == "kovan") {
-    chainId = BigInt.fromI32(42);
-  } else if (network == "bsc") {
-    chainId = BigInt.fromI32(56);
-  } else if (network == "chapel") {
-    chainId = BigInt.fromI32(97);
-  } else if (network == "xdai") {
-    chainId = BigInt.fromI32(100);
-  } else if (network == "matic") {
-    chainId = BigInt.fromI32(137);
-  } else if (network == "fantom") {
-    chainId = BigInt.fromI32(250);
-  } else if (network == "mbase") {
-    chainId = BigInt.fromI32(1287);
-  } else if (network == "arbitrum-one") {
-    chainId = BigInt.fromI32(42161);
-  } else if (network == "fuji") {
-    chainId = BigInt.fromI32(43113);
-  } else if (network == "avalanche") {
-    chainId = BigInt.fromI32(43114);
-  } else if (network == "mumbai") {
-    chainId = BigInt.fromI32(80001);
-  } else if (network == "arbitrum-rinkeby") {
-    chainId = BigInt.fromI32(421611);
-  } else {
-    // instantiate contract to get the chainId as a fallback
-    chainId = TransactionManager.bind(event.address).getChainId();
-  }
-
   // cannot use only transactionId because of multipath routing, this below combo will be unique for active txs
   let transactionId =
     event.params.transactionId.toHex() + "-" + event.params.user.toHex() + "-" + event.params.router.toHex();
@@ -169,6 +127,10 @@ export function handleTransactionPrepared(event: TransactionPrepared): void {
     let assetBalance = AssetBalance.load(assetBalanceId);
     assetBalance!.amount = assetBalance!.amount.minus(transaction.amount);
     assetBalance!.save();
+
+    updateGas("receiving", "prepare", event.transaction.gasLimit);
+  } else {
+    updateGas("sending", "prepare", event.transaction.gasLimit);
   }
 }
 
@@ -208,6 +170,10 @@ export function handleTransactionFulfilled(event: TransactionFulfilled): void {
     }
     assetBalance.amount = assetBalance.amount.plus(transaction!.amount);
     assetBalance.save();
+
+    updateGas("sending", "fulfill", event.transaction.gasLimit);
+  } else {
+    updateGas("receiving", "fulfill", event.transaction.gasLimit);
   }
 }
 
@@ -241,5 +207,78 @@ export function handleTransactionCancelled(event: TransactionCancelled): void {
     }
     assetBalance.amount = assetBalance.amount.plus(transaction!.amount);
     assetBalance.save();
+
+    updateGas("receiving", "cancel", event.transaction.gasLimit);
+  } else {
+    updateGas("sending", "cancel", event.transaction.gasLimit);
   }
+}
+
+function getChainId(transactionManagerAddress: Address): BigInt {
+  // try to get chainId from the mapping
+  let network = dataSource.network();
+  let chainId: BigInt;
+  if (network == "mainnet") {
+    chainId = BigInt.fromI32(1);
+  } else if (network == "ropsten") {
+    chainId = BigInt.fromI32(3);
+  } else if (network == "rinkeby") {
+    chainId = BigInt.fromI32(4);
+  } else if (network == "goerli") {
+    chainId = BigInt.fromI32(5);
+  } else if (network == "kovan") {
+    chainId = BigInt.fromI32(42);
+  } else if (network == "bsc") {
+    chainId = BigInt.fromI32(56);
+  } else if (network == "chapel") {
+    chainId = BigInt.fromI32(97);
+  } else if (network == "xdai") {
+    chainId = BigInt.fromI32(100);
+  } else if (network == "matic") {
+    chainId = BigInt.fromI32(137);
+  } else if (network == "fantom") {
+    chainId = BigInt.fromI32(250);
+  } else if (network == "mbase") {
+    chainId = BigInt.fromI32(1287);
+  } else if (network == "arbitrum-one") {
+    chainId = BigInt.fromI32(42161);
+  } else if (network == "fuji") {
+    chainId = BigInt.fromI32(43113);
+  } else if (network == "avalanche") {
+    chainId = BigInt.fromI32(43114);
+  } else if (network == "mumbai") {
+    chainId = BigInt.fromI32(80001);
+  } else if (network == "arbitrum-rinkeby") {
+    chainId = BigInt.fromI32(421611);
+  } else {
+    // instantiate contract to get the chainId as a fallback
+    chainId = TransactionManager.bind(transactionManagerAddress).getChainId();
+  }
+
+  return chainId;
+}
+
+function updateGas(side: string, method: string, gasLimit: BigInt): void {
+  let gasId = side + "-" + method;
+
+  const length = new BigInt(100);
+  let gas = Gas.load(gasId.toString());
+  if (gas == null) {
+    gas = new Gas(gasId.toString());
+    gas.gasLimitRecordLastHundred = [];
+    gas.gasLimitAverageLastHundered = new BigInt(0);
+  }
+
+  let records = gas.gasLimitRecordLastHundred;
+  const recordsLength = new BigInt(records.length);
+  if (recordsLength >= length) {
+    records.shift();
+  }
+  records.push(gasLimit);
+
+  const total = records.reduce((a, b) => a.plus(b), 0);
+  gas.gasLimitAverageLastHundered = new BigInt(total / records.length);
+  gas.gasLimitRecordLastHundred = records;
+
+  gas.save();
 }

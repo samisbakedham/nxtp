@@ -76,3 +76,12 @@ type User @entity {
   id: ID!
   transactions: [Transaction!]! @derivedFrom(field: "user")
 }
+
+# Gas entity keeps track of gas limits for each function
+type Gas @entity {
+  id: ID!
+
+  # Gas Limit
+  gasLimitRecordLastHundred: [BigInt!]!
+  gasLimitAverageLastHundered: BigInt!
+}
