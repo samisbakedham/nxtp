@@ -1,4 +1,4 @@
-FROM node:14.17.1-alpine3.13 as base
+FROM node:14.18-alpine3.13 as base
 LABEL website="Secure Docker Images https://secureimages.dev"
 LABEL description="We secure your business from scratch"
 LABEL maintainer="support@secureimages.dev"
@@ -24,7 +24,7 @@ RUN npm run build
 # CMD ["sleep", "3d"]
 ################################################################################
 
-FROM node:14.17.1-alpine3.13 as runtime
+FROM node:14.18-alpine3.13 as runtime
 LABEL website="Secure Docker Images https://secureimages.dev"
 LABEL description="We secure your business from scratch"
 LABEL maintainer="support@secureimages.dev"
